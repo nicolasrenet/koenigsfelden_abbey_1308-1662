@@ -1,0 +1,1 @@
+../bin/tei_to_collated_lines.py
