@@ -61,9 +61,9 @@ def page_xml_expand_text( page_path: str, line_dict ) -> dict:
     """ In a pageXML file, replace all transcriptions with their
     expanded version, using the page dictionary provided.
     """
-    with open( page_path, 'r') as tei:
+    with open( page_path, 'r') as page:
         print(page_path)
-        page_tree = ET.parse( page_path )
+        page_tree = ET.parse( page )
         ns = { 'pc': "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" }
 
         page_root = page_tree.getroot()
