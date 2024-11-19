@@ -1,7 +1,7 @@
 
 
 BIN=../bin
-IMG_SRC=../1.collation_with_expanded_transcription
+IMG_SRC=../0.collated_xml_pages_raw
 
 xmls := $(wildcard *.xml)
 maps := $(addsuffix .map.png, $(basename $(xmls)))

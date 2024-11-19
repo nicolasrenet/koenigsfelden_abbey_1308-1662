@@ -9,12 +9,16 @@ import re
 USAGE=f"USAGE: {sys.argv[0]} <tei.xml> [ <page_source_dir> ]"
 
 def clean_up( transcr: str ) -> str:
-    transcr = transcr.replace(u'✳','')
+    transcr = transcr.replace(u'✳','.')
     transcr = transcr.replace('&#13','')
     transcr = transcr.replace('\u200b','')
     transcr = transcr.replace('\uf2f7','')
+    #transcr = transcr.replace('¶','')
+    transcr = transcr.replace(u'dˀ','der')
+    transcr = transcr.replace(u'ꝫc̄','et cetera')
     transcr = re.sub(r'  +',' ', transcr)
-    return transcr
+    return transcr.strip()
+
 
 
 def tei_path_to_line_dict( tei_path: str ) -> dict:
@@ -22,17 +26,50 @@ def tei_path_to_line_dict( tei_path: str ) -> dict:
     Each page entry is itself a line dictionary, where the text
     has all abbreviations expanded.
     """
+
+    line_dict = {}
+    current_line = ''
+    page_source_image = ''
+
+    def text_collect( elt: ET.Element, ns, top=True, tab='') -> str:
+
+            nonlocal current_line
+
+            #print(tab + f"text_collect( {elt.tag} )")
+
+            if elt.tag == "{{{}}}lb".format(ns['pc']):
+                line_id = re.sub(r'^#facs_\d{1,}_(.+)', r'\1', elt.get('facs'))
+                current_line = line_id
+                line_dict[page_source_image][current_line]=''
+
+            text = ''
+            if elt.text is not None and not top: #and re.match(r'^\s*$', elt.text) is None:
+                #text += elt.text 
+                #print(tab + 'TEXT:', elt.text) 
+                line_dict[page_source_image][current_line] += elt.text
+            # collect inner nodes
+            for child in elt.findall('./'):
+                # skip abbreviations
+                if child.tag == '{{{}}}abbr'.format(ns['pc']):
+                    continue
+                #subtext = text_collect( child, ns, False, tab+'    ' )
+                text_collect( child, ns, False)
+                #text += subtext
+                #line_dict[current_line] += subtext 
+            if elt.tail is not None and not top: # and re.match(r'^\s*$', elt.tail) is None:
+                #text += ' '+elt.tail 
+                #print(tab + 'TAIL:', elt.tail )
+                line_dict[page_source_image][current_line] += elt.tail
+            
+            return text
+
     with open( tei_path, 'r') as tei:
 
         tei_tree = ET.parse( tei )
         ns = { 'pc': "http://www.tei-c.org/ns/1.0" }
-
         tei_root = tei_tree.getroot()
-
         body = tei_root.find('.//pc:text/pc:body', ns)
-
         page_source_image = ''
-        line_dict = {}
         for elt in body.iter():
             if elt.tag == "{{{}}}pb".format( ns['pc'] ):
                 page_source_image = elt.get('source') 
@@ -42,19 +79,9 @@ def tei_path_to_line_dict( tei_path: str ) -> dict:
                 print( page_source_image)
             elif elt.tag == "{{{}}}p".format( ns['pc'] ):
                 line_id = ''
-                text = ''
-                for page_atom in list(elt.iter())[1:]:
-                    if page_atom.tag == "{{{}}}lb".format(ns['pc']):
-                        text = ''
-                        line_id = re.sub(r'^#facs_\d{1,}_(.+)', r'\1', page_atom.get('facs'))
-                    elif page_atom.tag == "{{{}}}choice".format(ns['pc']):
-                        if page_atom.find('./pc:expan',ns) is not None:
-                            page_atom_text = page_atom.find('./pc:expan',ns).text
-                            text += page_atom_text if page_atom_text is not None else ''
-                    text += page_atom.tail if page_atom.tail is not None else ''
-                    if text != '':
-                        line_dict[page_source_image][line_id]=re.sub(r'\s+', r' ', text.strip())
+                text_collect( elt, ns )
         return line_dict 
+
 
 
 def page_xml_expand_text( page_path: str, line_dict ) -> dict:
@@ -76,14 +103,16 @@ def page_xml_expand_text( page_path: str, line_dict ) -> dict:
                 #print(line_id)
                 if line_id in line_dict:
                     new_transcription = line_dict[ line_id ]
-                    textLineElt.find('./pc:TextEquiv/pc:Unicode', ns).text=new_transcription 
+                    txtLineElt = textLineElt.find('./pc:TextEquiv/pc:Unicode', ns)
+                    #print("AFTER:", textLineElt.find('./pc:TextEquiv/pc:Unicode', ns).text)
                     clean_transc = clean_up(new_transcription)
+                    txtLineElt.text = clean_transc
                     #print(f"[{new_transcription}]", clean_transc)
                     region_text.append( clean_transc )
 
             region_text_unicode = textRegionElt.find('./pc:TextEquiv/pc:Unicode', ns)
             if region_text_unicode is not None:
-                region_text_unicode.text = '\n'.join( region_text )
+                region_text_unicode.text = '\n'.join(region_text)
 
 
         return page_tree

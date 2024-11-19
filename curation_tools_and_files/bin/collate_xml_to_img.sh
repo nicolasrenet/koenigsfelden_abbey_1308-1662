@@ -16,11 +16,15 @@ fi
 test -d $1 || mkdir $1
 echo $1
 for xml in $(find ./exports -name "*.xml" | grep -Ev '(mets.xml|metadata.xml)';  find ./kbs -name "*.xml" | grep -Ev '(mets.xml|metadata.xml)') ; do
+#for xml in $(find ./exports -name "*0099*.xml"); do
        	img_file=$(grep imageFilename $xml | sed 's/^.*imageFilename="\([^\"]\+\)".*$/\1/' ) ;
 
-	! test -f "$1/$img_file" || continue
+	if [ -f "$1/$img_file" ]; then
+	       echo $xml
+       	       continue
+	fi
 	
-	echo $img_file
+	#echo $img_file
 	if [[ -f "Digitalisate_JPG/$img_file" ]]; then
 		cp Digitalisate_JPG/$img_file $xml $1
 	else

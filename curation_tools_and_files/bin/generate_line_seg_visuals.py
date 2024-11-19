@@ -19,9 +19,12 @@ img_src = sys.argv[2] if len(sys.argv)>2 else '.'
 img_src = Path( img_src )
 
 img_file = img_src.joinpath( xml.name ).with_suffix('.jpg')
-if img_file.with_suffix('.map.png').exists():
+local_map = Path(img_file.with_suffix('.map.png').name)
+print(local_map, "type=", type(local_map))
+if local_map.exists():
+    print("Map exists!")
     sys.exit()
-pmap = seglib.polygon_map_from_img_xml_files( img_file, xml )
-display = seg_io.display_polygon_set_from_img_and_polygon_map( img_file, pmap )
+
+display = seg_io.display_polygon_lines_from_img_and_xml_files( str(img_file), str(xml) )
 img = Image.fromarray( display, 'RGB')
 img.save(Path(img_file.name).with_suffix('.map.png'))
