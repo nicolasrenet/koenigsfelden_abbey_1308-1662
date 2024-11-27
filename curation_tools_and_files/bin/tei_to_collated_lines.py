@@ -14,7 +14,7 @@ def clean_up( transcr: str ) -> str:
     transcr = transcr.replace('\u200b','')
     transcr = transcr.replace('\uf2f7','')
     #transcr = transcr.replace('¶','')
-    transcr = transcr.replace(u'dˀ','der')
+    #transcr = transcr.replace(u'dˀ','der')
     transcr = transcr.replace(u'ꝫc̄','et cetera')
     transcr = re.sub(r'  +',' ', transcr)
     return transcr.strip()
