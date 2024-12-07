@@ -12,7 +12,8 @@ def clean_up( transcr: str ) -> str:
     transcr = transcr.replace('&#13','')
     transcr = transcr.replace('\u200b','')
     transcr = transcr.replace('\uf2f7','')
-    transcr = transcr.replace(u'ꝫc̄','et cetera')
+    transcr = transcr.replace(u'ꝫc̄','etc')
+    transcr = transcr.replace(u'','Ü')
     transcr = re.sub(r'  +',' ', transcr)
     return transcr
 
@@ -39,11 +40,13 @@ if __name__ == "__main__":
          print(f"Could not find {sys.arv[1]}")
 
 
+    ns = { 'pc': "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" }
+    ET.register_namespace('', ns['pc']
+
     with open( page_path, 'r') as page:
         print(page_path)
 
         page_tree = ET.parse( page )
-        ns = { 'pc': "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" }
 
         page_root = page_tree.getroot()
         
