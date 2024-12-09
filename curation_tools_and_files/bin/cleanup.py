@@ -9,7 +9,7 @@ import re
 USAGE=f"USAGE: {sys.argv[0]} <page.xml> [ <output page.xml> ]"
 
 def clean_up( transcr: str ) -> str:
-    transcr = transcr.replace(u'✳','')
+    #transcr = transcr.replace(u'✳','')
     transcr = transcr.replace('&#13','')
     transcr = transcr.replace('\u200b','')
     transcr = transcr.replace('\uf2f7','')
