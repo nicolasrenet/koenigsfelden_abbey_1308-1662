@@ -28,7 +28,7 @@ def clean_up( transcr: str ) -> str:
     return transcr
 
 
-def expand( txt, masks, debug=False):
+def expand( txt, masks, debug=True):
     """
     From a list of tuples (offset, length, <expanded text>), expand
     the abbreviation contained in the input text.
@@ -51,7 +51,7 @@ def expand( txt, masks, debug=False):
         return (txt,[])
     for abb_offset,abb_length,abb_exp in masks:
         abb_offset, abb_length = int(abb_offset), int(abb_length)
-        new += txt[input_cursor:abb_offset] + (f'<{abb_exp}>' if debug else abb_exp )
+        new += txt[input_cursor:abb_offset] + (f'[{abb_exp}]' if debug else abb_exp )
         input_cursor = abb_offset + abb_length
         output_masks.append((abb_offset+output_offset,len(abb_exp), txt[abb_offset:abb_offset+abb_length]))
         output_offset += len(abb_exp)-abb_length

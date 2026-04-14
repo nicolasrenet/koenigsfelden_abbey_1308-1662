@@ -1,4 +1,4 @@
-A curated version of Thomas Hödel's somewhat raw data found in Zenodo:
+A curated version of Tobias Hödl dataset:
 
 * Original metadata: https://htr-united.github.io/share.html?uri=782b1e7da
 * Files: https://zenodo.org/record/5179361
