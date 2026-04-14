@@ -16,8 +16,7 @@ PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True $PYTHONPATH/bin/ddp_line_detect
 
 ```sh
 export PYTHONPATH=.
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-$PYTHONPATH/bin/align_seg_htr.py ---segfile_paths *.lines.pred.json ---htr_suffix .xml --output_suffix .hf10.aligned.json --overwrite_existing 1 --verbosity 2
+$PYTHONPATH/bin/align_seg_htr.py --segfile_paths *.lines.pred.json --htr_suffix .xml --output_suffix .hf10.aligned.json --overwrite_existing 1 --verbosity 2
 ```
 
 For reviewing the alignment:
