@@ -5,6 +5,8 @@ A curated version of Thomas Hödel's somewhat raw data found in Zenodo:
 
 The final dataset state results from the resulting operations:
 
+Obsolete:
+
 + discard pageXML files that cannot be reliably paired with an image (because the Trankscribus mapping has been lost)
 + handwriting abbreviations have been expanded, using the TEI as a source
 + glyphs and junk that is obviously irrelevant for HTR work removed from the transcriptions
@@ -13,3 +15,13 @@ The final dataset state results from the resulting operations:
 
 All steps but the last one are automated (scripts and Makefiles).
 
+11.2026: DiDip-style parallel transcriptions
+
+```bash
+TOOLS=$(realpath ./curation_tools_and_files)
+COLLATION=${TOOLS}/1.collation_with_abbreviated_transcription
+cd ${TOOLS}/bin
+./to_didip.py --verbosity 2 --output_format page --output_dir ${TOOLS}/didip  ${COLLATION}/*.xml
+cd ${TOOLS}/didip
+page_xml_to_json --file_paths *.xml --out auto --repair --validate --overwrite_existing
+```
