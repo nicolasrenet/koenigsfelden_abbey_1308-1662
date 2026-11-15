@@ -13,11 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 '''
+A comprehensive script to generate labels with parallel transcriptions from raw Koenigsfelden files.
+
++ Use XML custom annotations to Convert abbreviated transcriptions to Didip-style `<what you read>|<what you see>` labels.
++ Enforce DiDip-style character set.
+
+
 Input data:
 
 Page XML with
 
-+ abbreviation annotation in XML, eg.
++ abbreviation annotations in XML, eg.
 
   ```
   abbrev {offset: 132; length: 3; expansion:'ers}`
@@ -52,9 +58,6 @@ Page XML with
 
 '''
 
-
-
-abbreviation_re = re.compile( r'.+offset: *(\d+).+length: *(\d+).+expansion:([^;]+);.+' )
 
 def to_didip_charset( transcr: str ) -> str:
     """
@@ -145,6 +148,7 @@ if __name__ == "__main__":
 
     ns = { 'pc': "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" }
     ET.register_namespace('', ns['pc'] )
+    abbreviation_re = re.compile( r'.+offset: *(\d+).+length: *(\d+).+expansion:([^;]+);.+' )
 
     for page_file in args.input_xml:
         with open(Path(page_file)) as page:
@@ -173,8 +177,10 @@ if __name__ == "__main__":
                                 logger.debug( ab )
                                 offset, length, expansion = abbreviation_re.sub(r'\1|\2|\3', ab).split('|')
                                 expansion = re.sub(r'.u0020cetera', 'c', expansion )
-                                if expansion.find('u0020') < 0:
-                                    abbrev_masks.append( (int(offset), int(length), expansion) )
+                                # skipping all other expansions that contain a space
+                                if expansion.find('u0020') >= 0:
+                                    continue
+                                abbrev_masks.append( (int(offset), int(length), expansion) )
                             logger.debug(abbrev_masks)
                             # construct expanded version
                             expanded_transcription = ''
@@ -216,10 +222,4 @@ if __name__ == "__main__":
                     page_tree.write( target_dirpath.joinpath(xmlFilename), encoding='utf-8')
                 #ET.dump(page_tree)
                 page_root.remove( pageElt )
-
-
-
-
-
-
 
