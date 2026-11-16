@@ -8,14 +8,14 @@ for i in ../3.collation_with_expanded_transcription_minus_segfailures/*.xml ; do
 ## DiDip segmentation 
 
 ```sh
-export PYTHONPATH=.
+export PYTHONPATH=~/graz/htr/vre/ddpa_lines_ng;
 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True $PYTHONPATH/bin/ddp_line_detect.py --img_paths *_r.jpg --img_suffix '.jpg' --layout_suffix '.xml' --verbosity 2 --apply_model_thresholds --device gpu 
 ```
 
 ## Align DiDip segmentation with XML (HTR) ground-truths
 
 ```sh
-export PYTHONPATH=.
+export PYTHONPATH=~/graz/htr/vre/ddpa_lines_ng;
 $PYTHONPATH/bin/align_seg_htr.py --segfile_paths *.lines.pred.json --htr_suffix .xml --output_suffix .hf10.aligned.json --overwrite_existing 1 --verbosity 2
 ```
 
