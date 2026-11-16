@@ -5,17 +5,13 @@ A curated version of Tobias Hödl dataset:
 
 The final dataset state results from the resulting operations:
 
-Obsolete:
-
 + discard pageXML files that cannot be reliably paired with an image (because the Trankscribus mapping has been lost)
-+ handwriting abbreviations have been expanded, using the TEI as a source
-+ glyphs and junk that is obviously irrelevant for HTR work removed from the transcriptions
-+ diacritics have been kept (they can easily be removed by a consumer program)
-+ discard pages with failed line polygons
++ ... (to be documented)
 
-All steps but the last one are automated (scripts and Makefiles).
 
 11.2026: DiDip-style parallel transcriptions
+
+Big clean-up and homogenization that uses recent work on segmentation and transcription guidelines.
 
 ```bash
 TOOLS=$(realpath ./curation_tools_and_files)

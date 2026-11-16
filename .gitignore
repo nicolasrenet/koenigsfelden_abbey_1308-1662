@@ -3,3 +3,5 @@
 *.xml
 *.zip
 *.tar.gz
+*.json
+*.tsv
