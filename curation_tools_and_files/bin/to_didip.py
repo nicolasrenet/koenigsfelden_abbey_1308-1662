@@ -116,7 +116,7 @@ def to_didip_charset( transcr: str ) -> str:
     character_to_character_dict = { c:(cc[0] if type(cc) is list else cc)for cc in character_classes for c in cc }
 
     # each to be replaced with the combination of a letter and an abbreviation mark
-    hybrid_abbreviation_dict = { 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't*', 'Ꝟ':'V%', 'ꝟ':'v%' }
+    hybrid_abbreviation_dict = { 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
 
     for jk in junk:
         transcr = transcr.replace( jk, '')
