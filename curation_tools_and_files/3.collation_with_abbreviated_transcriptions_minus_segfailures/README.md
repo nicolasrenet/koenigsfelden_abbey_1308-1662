@@ -5,6 +5,21 @@
 for i in ../3.collation_with_expanded_transcription_minus_segfailures/*.xml ; do name=$(basename $i) ; ln -s ../1.collation_with_abbreviated_transcription/$name ; done
 ```
 
+```
+mkdir bt3
+mkdir bt5
+$PYTHONPATH/bin/ddp_line_detect.py -img_paths *_r.jpg -img_suffix '.jpg' -layout_suffix '.xml' -verbosity 2 -apply_model_thresholds 0 -box_threshold .3 -output_dir bt3 -mask_threshold .5 -device gpu
+$PYTHONPATH/bin/ddp_line_detect.py -img_paths *_r.jpg -img_suffix '.jpg' -layout_suffix '.xml' -verbosity 2 -apply_model_thresholds 0 -box_threshold .5 -output_dir bt5 -mask_threshold .5 -device gpu
+for i in bt3/*.lines.pred.json ; do ln -s $i ; done
+for i in *.lines.pred.json ; do $PYTHONPATH/bin/align_seg_htr.py -segfile_path $i -output_file ${i%.lines.pred.json}.htr.bt3.aligned.json -overwrite_existing 1 -verbosity 2; done
+rm -f *.lines.pred.json
+for i in bt5/*.lines.pred.json ; do ln -s $i ; done
+for i in *.lines.pred.json ; do $PYTHONPATH/bin/align_seg_htr.py -segfile_path $i -output_file ${i%.lines.pred.json}.htr.bt5.aligned.json -overwrite_existing 1 -verbosity 2; done
+```
+For reviewing the alignment:
+
+```
+=======
 ## DiDip segmentation 
 
 ```sh
