@@ -1,1 +1,0 @@
-/home/nicolas/graz/htr/vre/ddpa_lines_ng/bin/xml_to_json.py

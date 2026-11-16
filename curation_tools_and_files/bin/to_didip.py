@@ -74,6 +74,8 @@ def to_didip_charset( transcr: str ) -> str:
         transcr = transcr.replace(c, '')
 
     # 2. Substitutions
+    junk = [ '&#13', '\u200b', '\uf2f7' ]
+
     character_classes = [
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         ['A','Á','Â','Ã','Ä','Å','Ă','Ą','À', 'Ā'], ['a','á','â','ã','ä','å','ă','ą','à','ā'],
@@ -104,7 +106,7 @@ def to_didip_charset( transcr: str ) -> str:
         ['Z','Ź','Ż','Ž','Ẑ', 'Ƶ', 'Ʒ', 'Ȥ'], ['z','ź','ż','ž', 'ẑ', 'ƶ', 'ʒ', 'ȥ'],
         # each to be replaced with a single generic abbreviation mark (%)
         ['%', 'ƺ','Ꝯ','ꝯ','Ꝫ','ꝫ','ȝ','₰','ꝰ','ꝭ','&','₎','Ꜿ','כּ','ˀ','\u0304'],
-        ['$', '✳', ],
+        ['$', '✳', '¶'],
         ['-','¬'],
     ]
 
@@ -114,14 +116,18 @@ def to_didip_charset( transcr: str ) -> str:
     character_to_character_dict = { c:(cc[0] if type(cc) is list else cc)for cc in character_classes for c in cc }
 
     # each to be replaced with the combination of a letter and an abbreviation mark
-    hybrid_abbreviation_dict = { 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'Ꝟ':'V%', 'ꝟ':'v%' }
+    hybrid_abbreviation_dict = { 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't*', 'Ꝟ':'V%', 'ꝟ':'v%' }
 
+    for jk in junk:
+        transcr = transcr.replace( jk, '')
     for (k,v) in private_unicode_dict.items():
         transcr = transcr.replace(k,v)
     for (k,v) in character_to_character_dict.items():
         transcr = transcr.replace(k,v)
     for (k,v) in hybrid_abbreviation_dict.items():
         transcr = transcr.replace(k,v)
+
+    transcr = re.sub(r' +',' ', transcr).strip()
 
     return transcr
 
