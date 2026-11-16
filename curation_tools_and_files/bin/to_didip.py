@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
                             orig_tokens = original_transcription.split(' ')
                             exp_tokens = expanded_transcription.split(' ')
-                            parallel_transcription = ' '.join([ f'[{ot}|{et}' if et != ot else et for (ot,et) in zip( orig_tokens, exp_tokens )])
+                            parallel_transcription = ' '.join([ f'[{et}|{ot}' if et != ot else et for (ot,et) in zip( orig_tokens, exp_tokens )])
                             logger.debug(parallel_transcription)
 
                             textLineText.clear()
