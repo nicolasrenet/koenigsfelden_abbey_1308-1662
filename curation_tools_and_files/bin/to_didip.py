@@ -68,7 +68,7 @@ def to_didip_charset( transcr: str ) -> str:
     # 1. Deletions: superscript and diacritic marks
     superscript_charset = [['\u0363','\u0368','\u0369','\u0364','\u036a','\u0365','\u036b','\u0366','\u036c','\u036d','\u0367','\u036e','\u036f']]
     # character 0x304 is the upper bar, that allows for rewriting of abbreviation marks
-    diacritic_charset = [ ["'","ʼ"] + [ chr(c) for c in range(0x300,0x316) if c not in [ 0x304, 0x305 ] ] + [ '\u0321', '\u0322', '\u0327', '\u0328', '\u1dd0'] ]
+    diacritic_charset = [ ["'","ʼ"] + [ chr(c) for c in range(0x300,0x316) if c not in [ 0x303, 0x304, 0x305 ] ] + [ '\u0321', '\u0322', '\u0327', '\u0328', '\u1dd0'] ]
     punctuation_charset = [ [',',';'] ]
 
     for c in superscript_charset[0] + diacritic_charset[0] + punctuation_charset[0]:
@@ -132,15 +132,18 @@ def to_didip_charset( transcr: str ) -> str:
     return transcr
 
 def expand_text( orig_txt, masks ):
-    # fix annoying inconsistencies in Hödel's use of special characters
-    #orig_txt = orig_txt.replace('ē','ē')
-    # construct expanded version
     expanded_transcription = ''
     cursor = 0
     for mask in masks:
-        start, substituded_length, expansion_str = mask
+        start, length, expansion_str = mask
+        # fixing mask/diacritic inconsistencies: detecting
+        # diacritic ẽ, ē, and e̅ 
+        span = orig_txt[start:start+length]
+        lookahead = orig_txt[start+length] if (start+length)<len(orig_txt) else ''
+        if lookahead and span[-1]=='e' and ord(lookahead) in [ 0x303, 0x304, 0x305 ]:
+            length += 1
         expanded_transcription += orig_txt[cursor:start] + expansion_str
-        cursor = start + substituded_length
+        cursor = start + length
     expanded_transcription += orig_txt[cursor:]
     return expanded_transcription
 
@@ -204,18 +207,16 @@ if __name__ == "__main__":
                             for ab in re.findall(r'abbrev +{[^}]+expansion[^}_]+}', custom_annotation):
                                 logger.debug( ab )
                                 offset, length, expansion = abbreviation_re.sub(r'\1|\2|\3', ab).split('|')
-                                expansion = re.sub(r'.u0020cetera', 'c', expansion )
-                                # skipping all other expansions that contain a space
-                                if expansion.find('u0020') >= 0:
-                                    continue
+                                # for those expansions that should contain an internal space
+                                expansion = re.sub(r'.u0020', '_', expansion)
                                 abbrev_masks.append( (int(offset), int(length), expansion) )
                                 logger.debug(abbrev_masks)
-                            
+
                             expanded_transcription = expand_text( original_transcription, abbrev_masks )
-    
-                            orig_transcription_didip = to_didip_charset( orig_transcription )
+
+                            orig_transcription_didip = to_didip_charset( original_transcription )
                             exp_transcription_didip = to_didip_charset( expanded_transcription )
-                            parallel_transcription = zip_transcription( orig_transcription_didip, exp_transcription_didip )
+                            parallel_transcription = zip_transcriptions( orig_transcription_didip, exp_transcription_didip )
                             logger.debug(parallel_transcription)
 
                             textLineText.clear()
@@ -224,7 +225,7 @@ if __name__ == "__main__":
                             if args.output_format == 'plain':
                                 text_line_transcriptions.append( parallel_transcription )
                             
-                        #del textLineElt.attrib['custom']
+                        del textLineElt.attrib['custom']
 
             if args.output_format == 'none':
                 continue
