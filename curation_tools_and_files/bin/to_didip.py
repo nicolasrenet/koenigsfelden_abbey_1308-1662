@@ -5,6 +5,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 import argparse
 import logging
+import pytest
 
 logging_format="%(asctime)s - %(levelname)s: %(filename)s: %(funcName)s - %(message)s"
 logging_levels = {0: logging.ERROR, 1: logging.WARNING, 2: logging.INFO, 3: logging.DEBUG }
@@ -82,7 +83,7 @@ def to_didip_charset( transcr: str ) -> str:
         'B', 'b',
         ['C','Ç','Ć','Ĉ','Ċ','Č'], ['c','ç','ć','ĉ','ċ','č'],
         ['D','Ð','Ď','Đ'], ['d','ð','ď','đ'],
-        ['E','È','É','Ê','Ë','Ē','Ĕ','Ė','Ę','Ě'], ['e','è','é','ê','ë','ē','ĕ','ė','ę','ě'],
+        ['E','È','É','Ê','Ë','Ē','Ĕ','Ė','Ę','Ě'], ['e','è','é','ê','ë','ĕ','ė','ę','ě'],
         'F', 'f',
         ['G','Ĝ','Ğ','Ġ','Ģ'], ['g','ĝ','ğ','ġ','ģ','ḡ'],
         ['H','Ĥ','Ħ'], ['h','ĥ','ħ'],
@@ -116,7 +117,7 @@ def to_didip_charset( transcr: str ) -> str:
     character_to_character_dict = { c:(cc[0] if type(cc) is list else cc)for cc in character_classes for c in cc }
 
     # each to be replaced with the combination of a letter and an abbreviation mark
-    hybrid_abbreviation_dict = { 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
+    hybrid_abbreviation_dict = { 'ē': 'e%', 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
 
     for jk in junk:
         transcr = transcr.replace( jk, '')
@@ -128,8 +129,28 @@ def to_didip_charset( transcr: str ) -> str:
         transcr = transcr.replace(k,v)
 
     transcr = re.sub(r' +',' ', transcr).strip()
-
     return transcr
+
+def expand_text( orig_txt, masks ):
+    # fix annoying inconsistencies in Hödel's use of special characters
+    #orig_txt = orig_txt.replace('ē','ē')
+    # construct expanded version
+    expanded_transcription = ''
+    cursor = 0
+    for mask in masks:
+        start, substituded_length, expansion_str = mask
+        expanded_transcription += orig_txt[cursor:start] + expansion_str
+        cursor = start + substituded_length
+    expanded_transcription += orig_txt[cursor:]
+    return expanded_transcription
+
+def zip_transcriptions( abbr, exp ):
+
+    abbr_tokens = abbr.split(' ')
+    exp_tokens = exp.split(' ')
+    return ' '.join([ f'[{et}|{at}' if et != at else et for (et,at) in zip( exp_tokens, abbr_tokens )])
+   
+
 
 if __name__ == "__main__":
 
@@ -177,6 +198,7 @@ if __name__ == "__main__":
                         abbrev_masks = []
                         textLineText = textLineElt.find('./pc:TextEquiv/pc:Unicode', ns)
                         if textLineText is not None:
+
                             original_transcription = ''.join(textLineText.itertext())
                             logger.debug(f"ORIG: {original_transcription}")
                             for ab in re.findall(r'abbrev +{[^}]+expansion[^}_]+}', custom_annotation):
@@ -187,22 +209,13 @@ if __name__ == "__main__":
                                 if expansion.find('u0020') >= 0:
                                     continue
                                 abbrev_masks.append( (int(offset), int(length), expansion) )
-                            logger.debug(abbrev_masks)
-                            # construct expanded version
-                            expanded_transcription = ''
-                            cursor = 0
-                            for mask in abbrev_masks:
-                                expanded_transcription += original_transcription[cursor:mask[0]] + mask[2]
-                                cursor = mask[0] + mask[1]
-                            expanded_transcription += original_transcription[cursor:]
-                            logger.debug(f"EXP: {expanded_transcription}")
-
-                            original_transcription = to_didip_charset( original_transcription )
-                            expanded_transcription = to_didip_charset( expanded_transcription )
-
-                            orig_tokens = original_transcription.split(' ')
-                            exp_tokens = expanded_transcription.split(' ')
-                            parallel_transcription = ' '.join([ f'[{et}|{ot}' if et != ot else et for (ot,et) in zip( orig_tokens, exp_tokens )])
+                                logger.debug(abbrev_masks)
+                            
+                            expanded_transcription = expand_text( original_transcription, abbrev_masks )
+    
+                            orig_transcription_didip = to_didip_charset( orig_transcription )
+                            exp_transcription_didip = to_didip_charset( expanded_transcription )
+                            parallel_transcription = zip_transcription( orig_transcription_didip, exp_transcription_didip )
                             logger.debug(parallel_transcription)
 
                             textLineText.clear()
@@ -211,7 +224,7 @@ if __name__ == "__main__":
                             if args.output_format == 'plain':
                                 text_line_transcriptions.append( parallel_transcription )
                             
-                        del textLineElt.attrib['custom']
+                        #del textLineElt.attrib['custom']
 
             if args.output_format == 'none':
                 continue
@@ -229,3 +242,66 @@ if __name__ == "__main__":
                 #ET.dump(page_tree)
                 page_root.remove( pageElt )
 
+####
+def test_expand_text_1():
+    txt = 'mein eygen insigel, ✳ doch hochgenātt₎ mein₎ g₎ herˀ ✳ und dero gotzhusz Sanct Blasien ✳ wie obstat, ✳ mir, einē erbern gericht, ✳ all unsern erben und nachkhom̄en in alweg one schaden,'
+    masks = [(33, 4, 'nant'), (37, 2, 'ten'), (43, 2, 'nen'), (46, 2, 'gnädigen'), (49, 4, 'herren'), (111, 3, 'nem'), (158, 7, 'khommen')]
+    expected = 'mein eygen insigel, ✳ doch hochgenantten meinen gnädigen herren ✳ und dero gotzhusz Sanct Blasien ✳ wie obstat, ✳ mir, einem erbern gericht, ✳ all unsern erben und nachkhommen in alweg one schaden,'
+
+    assert expand_text( txt, masks ) == expected
+    
+def test_expand_text_2():
+    txt = 'Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen'
+    # original: mask error!
+    #masks = [(39, 2, 'ten'), (58, 2, 'men')]
+    masks = [(39, 2, 'ten'), (58, 3, 'men')]
+    expected = 'Schicker, ernstlich gebetten unnd erbetten den ersamen, fromen, wisen unnd bescheidnen Hannsen'
+    
+    assert expand_text( txt, masks ) == expected
+
+def test_didip_text_1():
+    abbr_txt = 'mein eygen insigel, ✳ doch hochgenātt₎ mein₎ g₎ herˀ ✳ und dero gotzhusz Sanct Blasien ✳ wie obstat, ✳ mir, einē erbern gericht, ✳ all unsern erben und nachkhom̄en in alweg one schaden,'
+    abbr_expected = 'mein eygen insigel $ doch hochgena%tt% mein% g% her% $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir eine% erbern gericht $ all unsern erben und nachkhom%en in alweg one schaden'
+    exp_txt = 'mein eygen insigel, ✳ doch hochgenantten meinen gnädigen herren ✳ und dero gotzhusz Sanct Blasien ✳ wie obstat, ✳ mir, einem erbern gericht, ✳ all unsern erben und nachkhommen in alweg one schaden,'
+    exp_expected = 'mein eygen insigel $ doch hochgenantten meinen gnadigen herren $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir einem erbern gericht $ all unsern erben und nachkhommen in alweg one schaden'
+    assert to_didip_charset( abbr_txt ) == abbr_expected
+    assert to_didip_charset( exp_txt ) == exp_expected
+
+def test_didip_text_2():
+    abbr_txt = 'Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen'
+    abbr_expected = 'Schicker ernstlich gebetten unnd erbette% den ersamen frome% wisen unnd bescheidnen Hannsen'
+    exp_txt = 'Schicker, ernstlich gebetten unnd erbetten den ersamen, fromen, wisen unnd bescheidnen Hannsen'
+    exp_expected = 'Schicker ernstlich gebetten unnd erbetten den ersamen fromen wisen unnd bescheidnen Hannsen'
+
+    assert to_didip_charset( abbr_txt ) == abbr_expected
+    assert to_didip_charset( exp_txt ) == exp_expected
+
+def test_zip_1():
+    abbr = 'mein eygen insigel $ doch hochgena%tt% mein% g% her% $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir eine% erbern gericht $ all unsern erben und nachkhom%en in alweg one schaden'
+    exp = 'mein eygen insigel $ doch hochgenantten meinen gnadigen herren $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir einem erbern gericht $ all unsern erben und nachkhommen in alweg one schaden'
+    expected = 'mein eygen insigel $ doch [hochgenantten|hochgena%tt% [meinen|mein% [gnadigen|g% [herren|her% $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir [einem|eine% erbern gericht $ all unsern erben und [nachkhommen|nachkhom%en in alweg one schaden'
+    assert zip_transcriptions(abbr, exp) == expected
+
+
+def test_zip_2():
+    abbr = 'Schicker ernstlich gebetten unnd erbette% den ersamen frome% wisen unnd bescheidnen Hannsen'
+    exp = 'Schicker ernstlich gebetten unnd erbetten den ersamen fromen wisen unnd bescheidnen Hannsen'
+    expected = 'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'
+    assert zip_transcriptions(abbr, exp) == expected
+
+
+def test_all_1():
+    txt = 'mein eygen insigel, ✳ doch hochgenātt₎ mein₎ g₎ herˀ ✳ und dero gotzhusz Sanct Blasien ✳ wie obstat, ✳ mir, einē erbern gericht, ✳ all unsern erben und nachkhom̄en in alweg one schaden,'
+    masks = [(33, 4, 'nant'), (37, 2, 'ten'), (43, 2, 'nen'), (46, 2, 'gnädigen'), (49, 4, 'herren'), (111, 3, 'nem'), (158, 7, 'khommen')]
+    expected = 'mein eygen insigel $ doch [hochgenantten|hochgena%tt% [meinen|mein% [gnadigen|g% [herren|her% $ und dero gotzhusz Sanct Blasien $ wie obstat $ mir [einem|eine% erbern gericht $ all unsern erben und [nachkhommen|nachkhom%en in alweg one schaden'
+    expansion = expand_text( txt, masks )
+    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
+
+def test_all_2():
+    txt = 'Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen'
+    # Second mask is wrong, as in the original text
+    masks = masks = [(39, 2, 'ten'), (58, 2, 'men')]
+    expected = 'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'
+
+    expansion = expand_text( txt, masks )
+    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
