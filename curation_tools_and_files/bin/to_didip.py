@@ -67,7 +67,7 @@ def to_didip_charset( transcr: str ) -> str:
 
     # 1. Deletions: superscript and diacritic marks
     superscript_charset = [['\u0363','\u0368','\u0369','\u0364','\u036a','\u0365','\u036b','\u0366','\u036c','\u036d','\u0367','\u036e','\u036f']]
-    # character 0x304 is the upper bar, that allows for rewriting of abbreviation marks
+    # characters (0x303=tilde, 0x304, 0x305 are upper bars) that allow for rewriting of abbreviation marks
     diacritic_charset = [ ["'","ʼ"] + [ chr(c) for c in range(0x300,0x316) if c not in [ 0x303, 0x304, 0x305 ] ] + [ '\u0321', '\u0322', '\u0327', '\u0328', '\u1dd0'] ]
     punctuation_charset = [ [',',';'] ]
 
@@ -77,6 +77,8 @@ def to_didip_charset( transcr: str ) -> str:
     # 2. Substitutions
     junk = [ '&#13', '\u200b', '\uf2f7' ]
 
+    # assumption: accentuated Unicode are _not_ used to represent an abbreviation
+    # exception: ē, that is sometimes used
     character_classes = [
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         ['A','Á','Â','Ã','Ä','Å','Ă','Ą','À', 'Ā'], ['a','á','â','ã','ä','å','ă','ą','à','ā'],
@@ -117,7 +119,9 @@ def to_didip_charset( transcr: str ) -> str:
     character_to_character_dict = { c:(cc[0] if type(cc) is list else cc)for cc in character_classes for c in cc }
 
     # each to be replaced with the combination of a letter and an abbreviation mark
-    hybrid_abbreviation_dict = { 'ē': 'e%', 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
+    hybrid_abbreviation_dict = { 'ē':'e%', 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
+    # adding all 2-character strings with upper bars or tilde
+    hybrid_abbreviation_dict.update( { diacritic:f"{diacritic[0]}%" for diacritic in [ chr(c)+dia for dia in ('\u0303','\u0304','\u0305') for c in range(ord('a'),ord('z')) ]} )
 
     for jk in junk:
         transcr = transcr.replace( jk, '')
@@ -134,6 +138,7 @@ def to_didip_charset( transcr: str ) -> str:
 def expand_text( orig_txt, masks ):
     expanded_transcription = ''
     cursor = 0
+    logger.debug(f"masks = {masks}")
     for mask in masks:
         start, length, expansion_str = mask
         # fixing mask/diacritic inconsistencies: detecting
@@ -210,7 +215,6 @@ if __name__ == "__main__":
                                 # for those expansions that should contain an internal space
                                 expansion = re.sub(r'.u0020', '_', expansion)
                                 abbrev_masks.append( (int(offset), int(length), expansion) )
-                                logger.debug(abbrev_masks)
 
                             expanded_transcription = expand_text( original_transcription, abbrev_masks )
 
@@ -224,8 +228,8 @@ if __name__ == "__main__":
 
                             if args.output_format == 'plain':
                                 text_line_transcriptions.append( parallel_transcription )
-                            
-                        del textLineElt.attrib['custom']
+
+                        #del textLineElt.attrib['custom']
 
             if args.output_format == 'none':
                 continue
@@ -301,8 +305,27 @@ def test_all_1():
 def test_all_2():
     txt = 'Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen'
     # Second mask is wrong, as in the original text
-    masks = masks = [(39, 2, 'ten'), (58, 2, 'men')]
+    masks = [(39, 2, 'ten'), (58, 2, 'men')]
     expected = 'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'
 
     expansion = expand_text( txt, masks )
     assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
+
+def test_all_3():
+    txt = 'iudex in hac ꝑte auc̃te ap̄ca spālitˀ depũtꝭ discˀtꝭ virꝭ in curꝭ seu vicarꝭ plb̄nis seu viceplb̄nis'
+    masks = [(13, 3, 'parte'), (17, 6, 'auctoritate'), (24, 3, 'apostoli'), (30, 4, 'specia'), (36, 2, 'ter'), (41, 3, 'puta'), (44, 2, 'tis'), (50, 2, 'cre'), (52, 2, 'tis'), (57, 2, 'ris'), (63, 4, 'curis'), (76, 2, 'riis'), (79, 4, 'pleba'), (95, 4, 'pleba')]
+    expected = 'iudex in hac [parte|p%te [auctoritate|auc%te [apostolica|ap%ca [specialiter|spa%lit% [deputatis|depu%t% [discretis|disc%t% [viris|vir% in [curis|cur% seu [vicariis|vicar% [plebanis|plb%nis seu [viceplebanis|viceplb%nis'
+
+    expansion = expand_text( txt, masks )
+    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
+
+def test_all_4():
+    txt = 'p̄positꝰ mon̄ Sc̄i Leonhardi Bas₎ ꝑ p̄poītū soliti gubernaī ordīs canōicoꝝ regulariū Sc̄i Augustī'
+
+    masks = [(0, 2, 'pre'), (6, 2, 'tus'), (9, 4, 'monasterii'), (14, 4, 'Sancti'), (29, 4, 'Basiliensis'), (34, 1, 'per'), (36, 2, 'pre'), (38, 4, 'posi'), (42, 3, 'tum'), (58, 4, 'nari'), (65, 4, 'dinis'), (72, 4, 'noni'), (78, 1, 'rum'), (86, 4, 'rium'), (91, 4, 'Sancti'), (101, 3, 'tini')]
+    expected = '[prepositus|p%posit% [monasterii|mon% [Sancti|Sc%i Leonhardi [Basiliensis|Bas% [per|p% [prepositum|p%poi%tu% soliti [gubernari|gubernai% [ordinis|ordi%s [canonicorum|cano%icor% [regularium|regulariu% [Sancti|Sc%i [Augustini|Augusti%'
+
+    expansion = expand_text( txt, masks )
+    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
+
+
