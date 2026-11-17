@@ -8,7 +8,7 @@
 #
 ROOT=$(realpath .)
 WORKDIR=${ROOT}/curation_tools_and_files
-INPUT=${WORKDIR}/1.collated_xml_verso
+INPUT=${WORKDIR}/1.collated_xml_recto
 DIDIP=${WORKDIR}/2.didip
 
 test -d "${DIDIP}" || mkdir -p ${DIDIP}
