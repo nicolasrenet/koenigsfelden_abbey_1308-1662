@@ -13,7 +13,7 @@ DIDIP=2.didip
 
 test -d "${DIDIP}" || mkdir -p ${DIDIP}
 
-rm ${WORKDIR}/${DIDIP}/*.{jpg,xml,json}
+rm $(ls ${WORKDIR}/${DIDIP}/*.{jpg,xml,json} |grep -v '\.lines\.')
 ${WORKDIR}/bin/to_didip.py --verbosity 2 --output_format page --output_dir ${WORKDIR}/${DIDIP} $(ls ${WORKDIR}/${RECTOS}/*.xml|grep -Ev '_v(_?([0-9]+))?\.xml')
 
 page_xml_to_json_check=$(whereis page_xml_to_json)
