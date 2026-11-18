@@ -8,12 +8,13 @@
 #
 ROOT=$(realpath .)
 WORKDIR=${ROOT}/curation_tools_and_files
-INPUT=${WORKDIR}/1.collated_xml_recto
-DIDIP=${WORKDIR}/2.didip
+RECTOS=1.collated_xml_recto
+DIDIP=2.didip
 
 test -d "${DIDIP}" || mkdir -p ${DIDIP}
 
-${WORKDIR}/bin/to_didip.py --verbosity 2 --output_format page --output_dir ${DIDIP} $(ls ${INPUT}/*.xml|grep -Ev '_v(_?([0-9]+))?\.xml')
+rm ${WORKDIR}/${DIDIP}/*.{jpg,xml,json}
+${WORKDIR}/bin/to_didip.py --verbosity 2 --output_format page --output_dir ${WORKDIR}/${DIDIP} $(ls ${WORKDIR}/${RECTOS}/*.xml|grep -Ev '_v(_?([0-9]+))?\.xml')
 
 page_xml_to_json_check=$(whereis page_xml_to_json)
 test -n "${page_xml_to_json_check/*:/}" || {
@@ -23,12 +24,9 @@ test -n "${page_xml_to_json_check/*:/}" || {
 }
 
 # PageXML → JSON
-cd ${DIDIP}
+cd ${WORKDIR}/${DIDIP}
 page_xml_to_json --file_paths *.xml --out auto --repair --validate --overwrite_existing ;
 # Linking images
-for img in ${INPUT}/*.jpg; do
-	img_name=$(basename $img)
-	if [[ -f "${img_name%.jpg}.json" || -f "${img_name%.jpg}.xml}" ]]; then
-		test -L $img_name || ln -s $img
-	fi
+for json in *.json; do
+	test -L ${json%.json}.jpg || ln -s ../${RECTOS}/${json%.json}.jpg
 done
