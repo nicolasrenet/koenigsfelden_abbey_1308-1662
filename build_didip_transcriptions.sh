@@ -27,6 +27,6 @@ test -n "${page_xml_to_json_check/*:/}" || {
 cd ${WORKDIR}/${DIDIP}
 page_xml_to_json --file_paths *.xml --out auto --repair --validate --overwrite_existing ;
 # Linking images
-for json in *.json; do
+for json in $(ls *.json| grep -v '\.lines\.'); do
 	test -L ${json%.json}.jpg || ln -s ../${RECTOS}/${json%.json}.jpg
 done
