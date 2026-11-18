@@ -146,16 +146,17 @@ def expand_text( orig_txt, masks ):
         # diacritic ẽ, ē, and e̅ 
         span = orig_txt[start:start+length]
         lookahead = orig_txt[start+length] if (start+length)<len(orig_txt) else ''
-        if lookahead and span[-1] in ('e','a','u', 'o', 'i') and ord(lookahead) in [ 0x303, 0x304, 0x305 ]:
-            logger.debug( f"offset_error: {span}" )
+        if lookahead and span[-1] in ('e','a','o','i','u') and ord(lookahead) in [ 0x303, 0x304, 0x305 ]:
+            logger.warning( f"offset_error: {span}" )
+            logger.warning( f'{masks}')
             error = True
             length += 1
         expanded_transcription += orig_txt[cursor:start] + expansion_str
         cursor = start + length
     expanded_transcription += orig_txt[cursor:]
     if error:
-        logger.debug( 'offset_error: '+orig_txt )
-        logger.debug( 'offset_error: '+expanded_transcription )
+        logger.warning( 'offset_error: '+orig_txt )
+        logger.warning( 'offset_error: '+expanded_transcription )
 
     return expanded_transcription
 
@@ -309,30 +310,25 @@ def test_all_1():
     expansion = expand_text( txt, masks )
     assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
 
-def test_all_2():
-    txt = 'Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen'
-    # Second mask is wrong, as in the original text
-    masks = [(39, 2, 'ten'), (58, 2, 'men')]
-    expected = 'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'
-
+@pytest.mark.parametrize("txt, masks, expected",
+                         [
+                             ('Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen', # handling of offset errors
+                              [(39, 2, 'ten'), (58, 2, 'men')],
+                              'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'),
+                             ('iudex in hac ꝑte auc̃te ap̄ca spālitˀ depũtꝭ discˀtꝭ virꝭ in curꝭ seu vicarꝭ plb̄nis seu viceplb̄nis',
+                              [(13, 3, 'parte'), (17, 6, 'auctoritate'), (24, 3, 'apostoli'), (30, 4, 'specia'), (36, 2, 'ter'), (41, 3, 'puta'), (44, 2, 'tis'), (50, 2, 'cre'), (52, 2, 'tis'), (57, 2, 'ris'), (63, 4, 'curis'), (76, 2, 'riis'), (79, 4, 'pleba'), (95, 4, 'pleba')],
+                              'iudex in hac [parte|p%te [auctoritate|auc%te [apostolica|ap%ca [specialiter|spa%lit% [deputatis|depu%t% [discretis|disc%t% [viris|vir% in [curis|cur% seu [vicariis|vicar% [plebanis|plb%nis seu [viceplebanis|viceplb%nis'),
+                             ('p̄positꝰ mon̄ Sc̄i Leonhardi Bas₎ ꝑ p̄poītū soliti gubernaī ordīs canōicoꝝ regulariū Sc̄i Augustī',
+                              [(0, 2, 'pre'), (6, 2, 'tus'), (9, 4, 'monasterii'), (14, 4, 'Sancti'), (29, 4, 'Basiliensis'), (34, 1, 'per'), (36, 2, 'pre'), (38, 4, 'posi'), (42, 3, 'tum'), (58, 4, 'nari'), (65, 4, 'dinis'), (72, 4, 'noni'), (78, 1, 'rum'), (86, 4, 'rium'), (91, 4, 'Sancti'), (101, 3, 'tini')],
+                              '[prepositus|p%posit% [monasterii|mon% [Sancti|Sc%i Leonhardi [Basiliensis|Bas% [per|p% [prepositum|p%poi%tu% soliti [gubernari|gubernai% [ordinis|ordi%s [canonicorum|cano%icor% [regularium|regulariu% [Sancti|Sc%i [Augustini|Augusti%',
+                              ),
+                             ('namen zetün ùnd bevolhen wirt ✳ den gedauchten mitgülten̄ und schuldner oder sin erben̄ als manbùrgen darū manen̄ mit betten, brieffen̄, zehusz, ze hoff ✳',
+                              [(53, 4, 'tenn'), (83, 4, 'benn'), (104, 2, 'rum'), (110, 4, 'nenn'), (132, 4, 'fenn')],
+                              'namen zetun und bevolhen wirt $ den gedauchten [mitgultenn|mitgulten% und schuldner oder sin [erbenn|erben% als manburgen [darum|daru% [manenn|manen% mit betten [brieffenn|brieffen% zehusz ze hoff $'),
+                            ])
+def test_all(txt, masks, expected):
     expansion = expand_text( txt, masks )
     assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
 
-def test_all_3():
-    txt = 'iudex in hac ꝑte auc̃te ap̄ca spālitˀ depũtꝭ discˀtꝭ virꝭ in curꝭ seu vicarꝭ plb̄nis seu viceplb̄nis'
-    masks = [(13, 3, 'parte'), (17, 6, 'auctoritate'), (24, 3, 'apostoli'), (30, 4, 'specia'), (36, 2, 'ter'), (41, 3, 'puta'), (44, 2, 'tis'), (50, 2, 'cre'), (52, 2, 'tis'), (57, 2, 'ris'), (63, 4, 'curis'), (76, 2, 'riis'), (79, 4, 'pleba'), (95, 4, 'pleba')]
-    expected = 'iudex in hac [parte|p%te [auctoritate|auc%te [apostolica|ap%ca [specialiter|spa%lit% [deputatis|depu%t% [discretis|disc%t% [viris|vir% in [curis|cur% seu [vicariis|vicar% [plebanis|plb%nis seu [viceplebanis|viceplb%nis'
-
-    expansion = expand_text( txt, masks )
-    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
-
-def test_all_4():
-    txt = 'p̄positꝰ mon̄ Sc̄i Leonhardi Bas₎ ꝑ p̄poītū soliti gubernaī ordīs canōicoꝝ regulariū Sc̄i Augustī'
-
-    masks = [(0, 2, 'pre'), (6, 2, 'tus'), (9, 4, 'monasterii'), (14, 4, 'Sancti'), (29, 4, 'Basiliensis'), (34, 1, 'per'), (36, 2, 'pre'), (38, 4, 'posi'), (42, 3, 'tum'), (58, 4, 'nari'), (65, 4, 'dinis'), (72, 4, 'noni'), (78, 1, 'rum'), (86, 4, 'rium'), (91, 4, 'Sancti'), (101, 3, 'tini')]
-    expected = '[prepositus|p%posit% [monasterii|mon% [Sancti|Sc%i Leonhardi [Basiliensis|Bas% [per|p% [prepositum|p%poi%tu% soliti [gubernari|gubernai% [ordinis|ordi%s [canonicorum|cano%icor% [regularium|regulariu% [Sancti|Sc%i [Augustini|Augusti%'
-
-    expansion = expand_text( txt, masks )
-    assert zip_transcriptions( to_didip_charset( txt ), to_didip_charset( expansion )) == expected
 
 
