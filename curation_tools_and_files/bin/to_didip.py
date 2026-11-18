@@ -120,7 +120,7 @@ def to_didip_charset( transcr: str ) -> str:
 
     # each to be replaced with the combination of a letter and an abbreviation mark
     hybrid_abbreviation_dict = { 'ē':'e%', 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
-    # adding all 2-character strings with upper bars or tilde
+    # adding all lowercase, 2-character strings with upper bars or tilde
     hybrid_abbreviation_dict.update( { diacritic:f"{diacritic[0]}%" for diacritic in [ chr(c)+dia for dia in ('\u0303','\u0304','\u0305') for c in range(ord('a'),ord('z')) ]} )
 
     for jk in junk:
@@ -139,17 +139,24 @@ def expand_text( orig_txt, masks ):
     expanded_transcription = ''
     cursor = 0
     logger.debug(f"masks = {masks}")
+    error = False
     for mask in masks:
         start, length, expansion_str = mask
         # fixing mask/diacritic inconsistencies: detecting
         # diacritic ẽ, ē, and e̅ 
         span = orig_txt[start:start+length]
         lookahead = orig_txt[start+length] if (start+length)<len(orig_txt) else ''
-        if lookahead and span[-1]=='e' and ord(lookahead) in [ 0x303, 0x304, 0x305 ]:
+        if lookahead and span[-1] in ('e','a','u', 'o', 'i') and ord(lookahead) in [ 0x303, 0x304, 0x305 ]:
+            logger.debug( f"offset_error: {span}" )
+            error = True
             length += 1
         expanded_transcription += orig_txt[cursor:start] + expansion_str
         cursor = start + length
     expanded_transcription += orig_txt[cursor:]
+    if error:
+        logger.debug( 'offset_error: '+orig_txt )
+        logger.debug( 'offset_error: '+expanded_transcription )
+
     return expanded_transcription
 
 def zip_transcriptions( abbr, exp ):
@@ -163,7 +170,7 @@ def zip_transcriptions( abbr, exp ):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='expand_pagexml.py')
-    parser.add_argument('input_xml', help='Input PageXML file path.', nargs='+')
+    parser.add_argument('input_xmls', help='Input PageXML file paths.', nargs='+')
     parser.add_argument('--output_dir', default='', help='Directory in which the resulting files (XML or line databases) are to be written.')
     parser.add_argument('--mask_del', action='store_true')
     parser.add_argument('--output_format', choices=['page', 'plain', 'none'], default='page', help="Output format: PageXML, plain text, or no output.")
@@ -185,7 +192,7 @@ if __name__ == "__main__":
     ET.register_namespace('', ns['pc'] )
     abbreviation_re = re.compile( r'.+offset: *(\d+).+length: *(\d+).+expansion:([^;]+);.+' )
 
-    for page_file in args.input_xml:
+    for page_file in args.input_xmls:
         with open(Path(page_file)) as page:
             logger.info( page_file )
             page_tree = ET.parse( page )
