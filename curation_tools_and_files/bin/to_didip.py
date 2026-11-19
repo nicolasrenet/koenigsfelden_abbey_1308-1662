@@ -64,18 +64,13 @@ def to_didip_charset( transcr: str ) -> str:
     """
     Enforce a reduced charset that complies with DiDip transcription guidelines (ASCII + generic abbreviation mark)
     """
-
-    # 1. Deletions: superscript and diacritic marks
+    
+    junk = [ '&#13', '\u200b', '\uf2f7' ]
     superscript_charset = [['\u0363','\u0368','\u0369','\u0364','\u036a','\u0365','\u036b','\u0366','\u036c','\u036d','\u0367','\u036e','\u036f']]
     # characters (0x303=tilde, 0x304, 0x305 are upper bars) that allow for rewriting of abbreviation marks
-    diacritic_charset = [ ["'","ʼ"] + [ chr(c) for c in range(0x300,0x316) if c not in [ 0x303, 0x304, 0x305 ] ] + [ '\u0321', '\u0322', '\u0327', '\u0328', '\u1dd0'] ]
+    bar_shaped_diacritics = [ 0x303, 0x304, 0x305 ]
+    diacritic_charset = [ ["'","ʼ"] + [ chr(c) for c in range(0x300,0x316) if c not in bar_shaped_diacritics ] + [ '\u0321', '\u0322', '\u0327', '\u0328', '\u1dd0'] ]
     punctuation_charset = [ [',',';'] ]
-
-    for c in superscript_charset[0] + diacritic_charset[0] + punctuation_charset[0]:
-        transcr = transcr.replace(c, '')
-
-    # 2. Substitutions
-    junk = [ '&#13', '\u200b', '\uf2f7' ]
 
     # assumption: accentuated Unicode are _not_ used to represent an abbreviation
     # exception: ē, that is sometimes used
@@ -115,16 +110,19 @@ def to_didip_charset( transcr: str ) -> str:
 
     # those characters should not be there in the first place :(
     private_unicode_dict = {'': 'v'}
-
     character_to_character_dict = { c:(cc[0] if type(cc) is list else cc)for cc in character_classes for c in cc }
-
     # each to be replaced with the combination of a letter and an abbreviation mark
     hybrid_abbreviation_dict = { 'ē':'e%', 'Ꝓ':'P%','Ꝑ':'P%','ꝓ':'p%', 'ꝑ':'p%', 'Ꝗ':'Q%','Ꝙ':'Q%', 'ꝗ':'q%','ꝙ':'q%', 'Ꝝ':'r%', 'ꝝ':'r%', 'ꝶ':'R%', 'ꝵ':'r%', 'ꝷ': 't%', 'Ꝟ':'V%', 'ꝟ':'v%' }
     # adding all lowercase, 2-character strings with upper bars or tilde
     hybrid_abbreviation_dict.update( { diacritic:f"{diacritic[0]}%" for diacritic in [ chr(c)+dia for dia in ('\u0303','\u0304','\u0305') for c in range(ord('a'),ord('z')) ]} )
 
+    # 1. Deletions
     for jk in junk:
         transcr = transcr.replace( jk, '')
+    for c in superscript_charset[0] + diacritic_charset[0] + punctuation_charset[0]:
+        transcr = transcr.replace(c, '')
+
+    # 2. Substitutions
     for (k,v) in private_unicode_dict.items():
         transcr = transcr.replace(k,v)
     for (k,v) in character_to_character_dict.items():
@@ -132,6 +130,7 @@ def to_didip_charset( transcr: str ) -> str:
     for (k,v) in hybrid_abbreviation_dict.items():
         transcr = transcr.replace(k,v)
 
+    # 3 normalize spaces
     transcr = re.sub(r' +',' ', transcr).strip()
     return transcr
 
@@ -312,17 +311,17 @@ def test_all_1():
 
 @pytest.mark.parametrize("txt, masks, expected",
                          [
-                             ('Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen', # handling of offset errors
+                             ('Schicker, ernstlich gebetten unnd erbettē den ersamen, fromē, wisen unnd bescheidnen Hannsen', # handling of offset errors (ē)
                               [(39, 2, 'ten'), (58, 2, 'men')],
                               'Schicker ernstlich gebetten unnd [erbetten|erbette% den ersamen [fromen|frome% wisen unnd bescheidnen Hannsen'),
-                             ('iudex in hac ꝑte auc̃te ap̄ca spālitˀ depũtꝭ discˀtꝭ virꝭ in curꝭ seu vicarꝭ plb̄nis seu viceplb̄nis',
+                             ('iudex in hac ꝑte auc̃te ap̄ca spālitˀ depũtꝭ discˀtꝭ virꝭ in curꝭ seu vicarꝭ plb̄nis seu viceplb̄nis', # handling of offset errors (c̃)
                               [(13, 3, 'parte'), (17, 6, 'auctoritate'), (24, 3, 'apostoli'), (30, 4, 'specia'), (36, 2, 'ter'), (41, 3, 'puta'), (44, 2, 'tis'), (50, 2, 'cre'), (52, 2, 'tis'), (57, 2, 'ris'), (63, 4, 'curis'), (76, 2, 'riis'), (79, 4, 'pleba'), (95, 4, 'pleba')],
                               'iudex in hac [parte|p%te [auctoritate|auc%te [apostolica|ap%ca [specialiter|spa%lit% [deputatis|depu%t% [discretis|disc%t% [viris|vir% in [curis|cur% seu [vicariis|vicar% [plebanis|plb%nis seu [viceplebanis|viceplb%nis'),
-                             ('p̄positꝰ mon̄ Sc̄i Leonhardi Bas₎ ꝑ p̄poītū soliti gubernaī ordīs canōicoꝝ regulariū Sc̄i Augustī',
+                             ('p̄positꝰ mon̄ Sc̄i Leonhardi Bas₎ ꝑ p̄poītū soliti gubernaī ordīs canōicoꝝ regulariū Sc̄i Augustī', # handling of offset erros (ū)
                               [(0, 2, 'pre'), (6, 2, 'tus'), (9, 4, 'monasterii'), (14, 4, 'Sancti'), (29, 4, 'Basiliensis'), (34, 1, 'per'), (36, 2, 'pre'), (38, 4, 'posi'), (42, 3, 'tum'), (58, 4, 'nari'), (65, 4, 'dinis'), (72, 4, 'noni'), (78, 1, 'rum'), (86, 4, 'rium'), (91, 4, 'Sancti'), (101, 3, 'tini')],
                               '[prepositus|p%posit% [monasterii|mon% [Sancti|Sc%i Leonhardi [Basiliensis|Bas% [per|p% [prepositum|p%poi%tu% soliti [gubernari|gubernai% [ordinis|ordi%s [canonicorum|cano%icor% [regularium|regulariu% [Sancti|Sc%i [Augustini|Augusti%',
                               ),
-                             ('namen zetün ùnd bevolhen wirt ✳ den gedauchten mitgülten̄ und schuldner oder sin erben̄ als manbùrgen darū manen̄ mit betten, brieffen̄, zehusz, ze hoff ✳',
+                             ('namen zetün ùnd bevolhen wirt ✳ den gedauchten mitgülten̄ und schuldner oder sin erben̄ als manbùrgen darū manen̄ mit betten, brieffen̄, zehusz, ze hoff ✳', # general handling of bar-shaped diacritics
                               [(53, 4, 'tenn'), (83, 4, 'benn'), (104, 2, 'rum'), (110, 4, 'nenn'), (132, 4, 'fenn')],
                               'namen zetun und bevolhen wirt $ den gedauchten [mitgultenn|mitgulten% und schuldner oder sin [erbenn|erben% als manburgen [darum|daru% [manenn|manen% mit betten [brieffenn|brieffen% zehusz ze hoff $'),
                             ])
